@@ -20,27 +20,63 @@ import Notifications from './pages/Notifications';
 function Navbar() {
   const { user, logout } = useAuth();
   const lang = getLanguage();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
   return (
     <nav className="navbar">
-      <Link to="/" className="navbar-title">Reiseplanlegger</Link>
+      <Link to="/hub" className="navbar-title">Reiseplanlegger</Link>
       <div className="navbar-actions">
-        <Link to="/notifications" style={{fontSize:'18px'}}>
-          {'\u{1F514}'}
+        <Link
+          to="/notifications"
+          className="btn-icon"
+          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          🔔
         </Link>
         <select
           value={lang}
           onChange={e => { setLanguage(e.target.value); window.location.reload(); }}
-          style={{padding:'4px 8px',borderRadius:6,border:'1px solid #ddd',fontSize:13}}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 'var(--radius-pill)',
+            border: '2px solid var(--border)',
+            fontSize: 13,
+            fontWeight: 600,
+            background: 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            outline: 'none',
+          }}
         >
-          <option value="no">NO</option>
-          <option value="en">EN</option>
+          <option value="no">🇳🇴 NO</option>
+          <option value="en">🇬🇧 EN</option>
         </select>
-        {user.is_admin ? <Link to="/admin" className="btn btn-small btn-warning">{t('admin')}</Link> : null}
-        <Link to="/profile" style={{fontSize:'14px',fontWeight:600}}>{user.username || user.first_name}</Link>
-        <button className="btn btn-small btn-secondary" onClick={logout}>{t('logout')}</button>
+        {user.is_admin && (
+          <Link to="/admin" className="btn btn-small btn-warning">Admin</Link>
+        )}
+        <Link
+          to="/profile"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            textDecoration: 'none',
+            color: 'var(--text)',
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          <div className="avatar avatar-sm">{(user.first_name || '?')[0]}</div>
+          <span style={{ display: 'none' }}>{user.first_name}</span>
+        </Link>
+        <button
+          className="btn btn-small btn-ghost"
+          onClick={logout}
+          style={{ color: 'var(--text-light)' }}
+        >
+          {t('logout')}
+        </button>
       </div>
     </nav>
   );

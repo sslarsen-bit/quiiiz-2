@@ -35,7 +35,7 @@ module.exports = function(db) {
         id, title, req.user.id, start_date || null, end_date || null,
         budget_per_person || null, budget_currency || 'NOK',
         JSON.stringify(interests || []), JSON.stringify(preferred_countries || []),
-        enable_country ?? 1, enable_place ?? 1, enable_flight ?? 1, enable_hotel ?? 1, enable_activity ?? 1,
+        enable_country === false ? 0 : 1, enable_place === false ? 0 : 1, enable_flight === false ? 0 : 1, enable_hotel === false ? 0 : 1, enable_activity === false ? 0 : 1,
         voting_timing || 'ALL_AT_END', suggestion_deadline || null, voting_deadline || null,
         invite_code, fixed_destination_place_id || null
       );
@@ -157,7 +157,10 @@ module.exports = function(db) {
       for (const key of allowed) {
         if (fields[key] !== undefined) {
           updates.push(`${key} = ?`);
-          values.push(typeof fields[key] === 'object' ? JSON.stringify(fields[key]) : fields[key]);
+          let val = fields[key];
+          if (typeof val === 'object') val = JSON.stringify(val);
+          else if (typeof val === 'boolean') val = val ? 1 : 0;
+          values.push(val);
         }
       }
 

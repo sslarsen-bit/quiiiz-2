@@ -5,6 +5,21 @@ import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 import { api } from '../api/client';
 import { t } from '../i18n';
 
+const COUNTRY_FLAGS = {
+  ES: '🇪🇸', IT: '🇮🇹', GR: '🇬🇷', PT: '🇵🇹',
+  HR: '🇭🇷', TH: '🇹🇭', FR: '🇫🇷', TR: '🇹🇷',
+  NO: '🇳🇴', SE: '🇸🇪', DK: '🇩🇰', DE: '🇩🇪', US: '🇺🇸', GB: '🇬🇧',
+};
+
+const PLACE_GRADIENTS = [
+  'linear-gradient(135deg, #e74c3c, #f39c12)',
+  'linear-gradient(135deg, #3498db, #2ecc71)',
+  'linear-gradient(135deg, #9b59b6, #e74c3c)',
+  'linear-gradient(135deg, #1abc9c, #3498db)',
+  'linear-gradient(135deg, #f39c12, #e74c3c)',
+  'linear-gradient(135deg, #2ecc71, #3498db)',
+];
+
 export default function Profile() {
   const { userId } = useParams();
   const { user } = useAuth();
@@ -15,6 +30,7 @@ export default function Profile() {
   const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState([]);
 
   const isOwnProfile = !userId || userId === user?.id;
 
@@ -29,6 +45,8 @@ export default function Profile() {
           setFriends(f);
           const p = await api.get('/social/friends/pending').catch(() => []);
           setPending(p);
+          const t = await api.get('/trips').catch(() => []);
+          setTrips(t);
         } else {
           const data = await api.get(`/social/profile/${userId}`);
           setProfileData(data);
@@ -60,114 +78,283 @@ export default function Profile() {
   if (loading) return <div className="spinner" />;
   if (!profileData) return <div className="page"><p>Profil ikke funnet</p></div>;
 
+  const acceptedFriends = friends.filter(f => f.status === 'ACCEPTED');
+  const visitedPlaces = profileData.visitedPlaces || [];
+  const posts = profileData.posts || [];
+  const ratings = profileData.ratings || [];
+
   return (
     <div className="page fade-in">
-      {/* Profile header */}
-      <div className="card" style={{textAlign:'center'}}>
-        <div className="avatar" style={{width:80,height:80,fontSize:32,margin:'0 auto 12px'}}>
-          {(profileData.first_name || '?')[0]}
-        </div>
-        <h2 style={{fontWeight:700}}>{profileData.first_name} {profileData.last_name}</h2>
-        <div style={{color:'var(--text-light)',fontSize:14}}>@{profileData.username}</div>
+      {/* Profile Header - Instagram style */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
+        {/* Cover gradient */}
+        <div className="profile-cover" />
 
-        {isOwnProfile && (
-          <div style={{marginTop:12}}>
-            {!profileData.email_verified ? (
-              <button className="btn btn-small btn-warning" onClick={verifyEmail}>{t('verify_email')} (demo)</button>
-            ) : (
-              <span className="badge badge-success">{t('verified')}</span>
-            )}
-            <Link to="/edit-profile" className="btn btn-small btn-secondary" style={{marginTop:8}}>{t('edit_profile')}</Link>
+        <div className="profile-header">
+          {/* Avatar */}
+          <div className="profile-avatar-wrapper">
+            <div className="avatar avatar-lg" style={{ margin: '0 auto' }}>
+              {(profileData.first_name || '?')[0]}
+            </div>
           </div>
-        )}
 
-        {!isOwnProfile && !profileData.isFriend && (
-          <button className="btn btn-small btn-primary" style={{marginTop:12}} onClick={() => sendFriendRequest(userId)}>
-            {t('add_friend')}
-          </button>
-        )}
-        {!isOwnProfile && profileData.isFriend && (
-          <span className="badge badge-success" style={{marginTop:12}}>Venner</span>
-        )}
+          {/* Name & username */}
+          <h2 style={{ fontWeight: 800, fontSize: 22, marginTop: 14 }}>
+            {profileData.first_name} {profileData.last_name}
+          </h2>
+          <div style={{ color: 'var(--text-light)', fontSize: 14, fontWeight: 500 }}>
+            @{profileData.username}
+          </div>
+
+          {/* Email verification */}
+          {isOwnProfile && (
+            <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {!profileData.email_verified ? (
+                <button className="btn btn-small btn-warning" onClick={verifyEmail}>
+                  Verifiser e-post
+                </button>
+              ) : (
+                <span className="badge badge-success">Verifisert</span>
+              )}
+              <Link to="/edit-profile" className="btn btn-small btn-secondary">
+                Rediger profil
+              </Link>
+            </div>
+          )}
+
+          {/* Friend actions */}
+          {!isOwnProfile && !profileData.isFriend && (
+            <button className="btn btn-small btn-primary" style={{ marginTop: 14, maxWidth: 200, margin: '14px auto 0' }} onClick={() => sendFriendRequest(userId)}>
+              Legg til venn
+            </button>
+          )}
+          {!isOwnProfile && profileData.isFriend && (
+            <span className="badge badge-success" style={{ marginTop: 14 }}>Venner</span>
+          )}
+
+          {/* Stats row */}
+          <div className="profile-stats">
+            <div className="profile-stat">
+              <div className="profile-stat-num">{posts.length}</div>
+              <div className="profile-stat-label">Innlegg</div>
+            </div>
+            <div className="profile-stat">
+              <div className="profile-stat-num">{acceptedFriends.length}</div>
+              <div className="profile-stat-label">Venner</div>
+            </div>
+            <div className="profile-stat">
+              <div className="profile-stat-num">{visitedPlaces.length}</div>
+              <div className="profile-stat-label">Steder</div>
+            </div>
+            {isOwnProfile && (
+              <div className="profile-stat">
+                <div className="profile-stat-num">{trips.length}</div>
+                <div className="profile-stat-label">Turer</div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Pending friend requests */}
       {isOwnProfile && pending.length > 0 && (
         <div className="card">
-          <h3 style={{fontWeight:700,marginBottom:8}}>{t('pending_requests')} ({pending.length})</h3>
+          <h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: 16 }}>
+            Venneforespørsler ({pending.length})
+          </h3>
           {pending.map(p => (
             <div key={p.friendship_id} className="list-item">
-              <div className="avatar avatar-sm">{(p.first_name||'?')[0]}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:600}}>{p.first_name} {p.last_name}</div>
-                <div style={{fontSize:12,color:'var(--text-light)'}}>@{p.username}</div>
+              <div className="avatar avatar-sm">{(p.first_name || '?')[0]}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{p.first_name} {p.last_name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-light)' }}>@{p.username}</div>
               </div>
-              <button className="btn btn-small btn-success" onClick={() => acceptFriend(p.friendship_id)}>Godta</button>
+              <button className="btn btn-small btn-success" onClick={() => acceptFriend(p.friendship_id)}>
+                Godta
+              </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Friends */}
-      {isOwnProfile && flags.social_enabled && (
-        <div className="card">
-          <h3 style={{fontWeight:700,marginBottom:8}}>{t('friends')} ({friends.filter(f => f.status === 'ACCEPTED').length})</h3>
-          {friends.filter(f => f.status === 'ACCEPTED').map(f => (
-            <div key={f.friendship_id} className="list-item" style={{cursor:'pointer'}} onClick={() => navigate(`/profile/${f.friend_id}`)}>
-              <div className="avatar avatar-sm">{(f.first_name||'?')[0]}</div>
-              <div><span style={{fontWeight:600}}>{f.first_name} {f.last_name}</span> <span style={{fontSize:12,color:'var(--text-light)'}}>@{f.username}</span></div>
-            </div>
-          ))}
-          {friends.filter(f => f.status === 'ACCEPTED').length === 0 && <p style={{color:'var(--text-light)',fontSize:14}}>Ingen venner ennå</p>}
+      {/* Friends list */}
+      {isOwnProfile && flags.social_enabled && acceptedFriends.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: 16 }}>Venner</h3>
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '4px 0' }}>
+            {acceptedFriends.map(f => (
+              <div
+                key={f.friendship_id}
+                onClick={() => navigate(`/profile/${f.friend_id}`)}
+                style={{ textAlign: 'center', cursor: 'pointer', flexShrink: 0, width: 70 }}
+              >
+                <div className="avatar" style={{ margin: '0 auto 6px', width: 52, height: 52, fontSize: 20 }}>
+                  {(f.first_name || '?')[0]}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  {f.first_name}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Profile tabs */}
+      {/* Tabs */}
       <div className="tabs">
-        <div className={`tab ${tab === 'posts' ? 'active' : ''}`} onClick={() => setTab('posts')}>{t('posts')}</div>
-        <div className={`tab ${tab === 'ratings' ? 'active' : ''}`} onClick={() => setTab('ratings')}>{t('ratings')}</div>
-        <div className={`tab ${tab === 'trips' ? 'active' : ''}`} onClick={() => setTab('trips')}>{t('trips')}</div>
+        <div className={`tab ${tab === 'posts' ? 'active' : ''}`} onClick={() => setTab('posts')}>Innlegg</div>
+        <div className={`tab ${tab === 'places' ? 'active' : ''}`} onClick={() => setTab('places')}>Steder</div>
+        <div className={`tab ${tab === 'ratings' ? 'active' : ''}`} onClick={() => setTab('ratings')}>Vurderinger</div>
+        {isOwnProfile && (
+          <div className={`tab ${tab === 'trips' ? 'active' : ''}`} onClick={() => setTab('trips')}>Turer</div>
+        )}
       </div>
 
+      {/* Posts tab - Grid layout */}
       {tab === 'posts' && (
         <div>
-          {(profileData.posts || []).map(post => (
-            <div key={post.id} className="card">
-              {post.image_url && <img src={post.image_url} alt="" style={{width:'100%',borderRadius:8,marginBottom:8}} />}
-              <p>{post.caption}</p>
-              <div style={{fontSize:12,color:'var(--text-light)',marginTop:4}}>
-                {post.visibility === 'FRIENDS_ONLY' ? t('friends_only') : t('public')} | {post.like_count || 0} likes | {new Date(post.created_at).toLocaleDateString('no-NO')}
-              </div>
+          {posts.length > 0 ? (
+            <>
+              {/* Grid of posts with images */}
+              {posts.filter(p => p.image_url).length > 0 && (
+                <div className="profile-grid">
+                  {posts.filter(p => p.image_url).map(post => (
+                    <div key={post.id} className="profile-grid-item">
+                      <img src={post.image_url} alt="" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Text posts */}
+              {posts.map(post => (
+                <div key={post.id} className="card" style={{ marginTop: posts.filter(p => p.image_url).length > 0 ? 16 : 0 }}>
+                  {post.image_url && (
+                    <img src={post.image_url} alt="" style={{ width: '100%', borderRadius: 12, marginBottom: 12 }} />
+                  )}
+                  <p style={{ fontSize: 15 }}>{post.caption}</p>
+                  <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 8, display: 'flex', gap: 12 }}>
+                    <span>{post.visibility === 'FRIENDS_ONLY' ? '🔒 Venner' : '🌍 Offentlig'}</span>
+                    <span>❤️ {post.like_count || 0}</span>
+                    <span>{new Date(post.created_at).toLocaleDateString('no-NO')}</span>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">📸</div>
+              <p>Ingen innlegg ennå</p>
             </div>
-          ))}
-          {(profileData.posts || []).length === 0 && <p style={{color:'var(--text-light)',textAlign:'center',padding:20}}>Ingen innlegg ennå</p>}
+          )}
         </div>
       )}
 
+      {/* Places tab - Visited places */}
+      {tab === 'places' && (
+        <div>
+          {visitedPlaces.length > 0 ? (
+            <>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {visitedPlaces.map((vp, i) => {
+                  const countryCode = vp.country_code || '';
+                  return (
+                    <div
+                      key={vp.id}
+                      className="visited-place"
+                      style={{ flex: '1 1 calc(50% - 4px)', minWidth: 200 }}
+                    >
+                      <div style={{
+                        width: 50, height: 50, borderRadius: 12,
+                        background: PLACE_GRADIENTS[i % PLACE_GRADIENTS.length],
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24, flexShrink: 0,
+                      }}>
+                        {COUNTRY_FLAGS[countryCode] || '📍'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{vp.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
+                          {vp.source === 'TRIP_AUTO' ? '✈️ Fra tur' : '📌 Lagt til manuelt'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">🗺️</div>
+              <p>Ingen steder registrert ennå.<br />Reis på tur for å legge til steder!</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ratings tab */}
       {tab === 'ratings' && (
         <div>
-          {(profileData.ratings || []).map(r => (
-            <div key={r.id} className="list-item">
-              <div style={{flex:1}}>
-                <div style={{fontWeight:600}}>{r.name}</div>
-                <div style={{fontSize:12,color:'var(--text-light)'}}>{r.obj_type}</div>
+          {ratings.length > 0 ? (
+            ratings.map(r => (
+              <div key={r.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 16 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: 'linear-gradient(135deg, #fef3c7, #fbbf24)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20,
+                }}>⭐</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{r.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-light)' }}>{r.obj_type}</div>
+                </div>
+                <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: 16, letterSpacing: 2 }}>
+                  {'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}
+                </div>
               </div>
-              <div style={{color:'#f59e0b',fontWeight:700}}>{'★'.repeat(r.stars)}{'☆'.repeat(5-r.stars)}</div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">⭐</div>
+              <p>Ingen vurderinger ennå</p>
             </div>
-          ))}
-          {(profileData.ratings || []).length === 0 && <p style={{color:'var(--text-light)',textAlign:'center',padding:20}}>Ingen vurderinger ennå</p>}
+          )}
         </div>
       )}
 
-      {tab === 'trips' && (
+      {/* Trips tab - saved trips */}
+      {tab === 'trips' && isOwnProfile && (
         <div>
-          {(profileData.visitedPlaces || []).map(vp => (
-            <div key={vp.id} className="list-item">
-              <div style={{fontWeight:600}}>{vp.name}</div>
-              <div className="badge badge-primary" style={{marginLeft:8}}>{vp.source === 'TRIP_AUTO' ? 'Fra tur' : 'Manuell'}</div>
+          {trips.length > 0 ? (
+            trips.map(trip => (
+              <div
+                key={trip.id}
+                className="trip-card"
+                onClick={() => navigate(`/trip/${trip.id}`)}
+              >
+                <div className="trip-card-header">
+                  <div className="trip-card-title">{trip.title}</div>
+                  <span className={`badge ${
+                    trip.status === 'BOOKED' || trip.status === 'LOCKED' ? 'badge-success' :
+                    trip.status === 'VOTING_OPEN' ? 'badge-warning' : 'badge-primary'
+                  }`}>
+                    {trip.status === 'COLLECTING_SUGGESTIONS' ? 'Planlegger' :
+                     trip.status === 'VOTING_OPEN' ? 'Avstemning' :
+                     trip.status === 'LOCKED' ? 'Låst' :
+                     trip.status === 'BOOKED' ? 'Booket' : trip.status}
+                  </span>
+                </div>
+                <div className="trip-card-meta">
+                  {trip.start_date && `📅 ${trip.start_date} — ${trip.end_date}`}
+                  {trip.member_count && ` · 👥 ${trip.member_count}`}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">✈️</div>
+              <p>Ingen turer ennå</p>
             </div>
-          ))}
-          {(profileData.visitedPlaces || []).length === 0 && <p style={{color:'var(--text-light)',textAlign:'center',padding:20}}>Ingen steder registrert ennå</p>}
+          )}
         </div>
       )}
     </div>
