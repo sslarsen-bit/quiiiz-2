@@ -70,31 +70,5 @@ module.exports = function(db) {
     }
   });
 
-  // Get notifications
-  router.get('/notifications', authenticateToken, (req, res) => {
-    try {
-      const notifications = db.prepare(`
-        SELECT n.*, t.title as trip_title FROM notifications n
-        LEFT JOIN trips t ON t.id = n.trip_id
-        WHERE n.user_id = ?
-        ORDER BY n.created_at DESC
-        LIMIT 50
-      `).all(req.user.id);
-      res.json(notifications);
-    } catch (err) {
-      res.status(500).json({ error: 'Feil' });
-    }
-  });
-
-  // Mark notification as read
-  router.put('/notifications/:id/read', authenticateToken, (req, res) => {
-    try {
-      db.prepare("UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ?").run(req.params.id, req.user.id);
-      res.json({ message: 'Lest' });
-    } catch (err) {
-      res.status(500).json({ error: 'Feil' });
-    }
-  });
-
   return router;
 };
