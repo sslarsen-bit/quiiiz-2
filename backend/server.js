@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 const config = require('./config');
 const { featureFlagMiddleware } = require('./services/featureFlags');
 
@@ -19,9 +19,9 @@ let db;
 
 function initDatabase() {
   const needsSeed = !fs.existsSync(DB_PATH);
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  db = new DatabaseSync(DB_PATH);
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
 
   if (needsSeed) {
     console.log('No database found, running schema and seed...');
